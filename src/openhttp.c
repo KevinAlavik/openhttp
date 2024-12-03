@@ -28,9 +28,13 @@ static __thread const char *_openhttp_last_error_message = "Success";
 // ------- SERVER ---------------------
 int openhttp_server_spawn(int port)
 {
-    return OPENHTTP_SYSTEM_PREFIX(server_spawn)(port);
+    return OPENHTTP_SYSTEM_PREFIX(server_spawn)(port, OPENHTTP_SYSTEM_PREFIX(server_callback));
 }
 
+int openhttp_cleanup()
+{
+    return OPENHTTP_SYSTEM_PREFIX(cleanup)();
+}
 // -------- DEBUG ---------------------
 int _openhttp_loopback(int a)
 {

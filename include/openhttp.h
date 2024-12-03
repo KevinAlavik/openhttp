@@ -60,7 +60,21 @@
 
 // ------------------------ BEGIN -----------------------------
 
+/**
+ * Spawns a new HTTP server on the specified port.
+ *
+ * Returns:
+ * - OPENHTTP_SUCCESS if the server was successfully spawned, unless an error
+ */
 int openhttp_server_spawn(int port);
+
+/**
+ * Cleans up any resources allocated by the OpenHTTP library.
+ *
+ * Returns:
+ * - OPENHTTP_SUCCESS if the cleanup was successful, unless an error occurred.
+ */
+int openhttp_cleanup();
 
 // ------------------------- END ------------------------------
 
@@ -73,11 +87,40 @@ int openhttp_server_spawn(int port);
 // ------------------------ BEGIN -----------------------------
 #ifdef __linux__
 #define OPENHTTP_SYSTEM_PREFIX(func) _openhttp_linux_##func
+typedef int (*_openhttp_client_handler_t)(int client_fd, const char *request);
 #else
 #define OPENHTTP_SYSTEM_PREFIX(func) func
+typedef int (*_openhttp_client_handler_t)(const char *request);
 #endif // __linux__
 
-int OPENHTTP_SYSTEM_PREFIX(server_spawn)(int _port);
+/**
+ * Spawns a new HTTP server on the specified port.
+ *
+ * Returns:
+ *  - OPENHTTP_SUCCESS if the server was successfully spawned, unless an error occurred.
+ */
+int OPENHTTP_SYSTEM_PREFIX(server_spawn)(int _port, _openhttp_client_handler_t client_handler);
+
+/**
+ * Handles HTTP requests based on the provided request information.
+ *
+ * Returns:
+ *  - OPENHTTP_SUCCESS if the request was handled successfully, unless an error occurred.
+ */
+
+#ifdef __linux__
+int OPENHTTP_SYSTEM_PREFIX(server_callback)(int client_fd, const char *request);
+#else
+int OPENHTTP_SYSTEM_PREFIX(server_callback)(const char *request);
+#endif // __linux__
+
+/**
+ * Cleans up any resources allocated by the OpenHTTP library.
+ *
+ * Returns:
+ * - OPENHTTP_SUCCESS if the cleanup was successful, unless an error occurred.
+ */
+int OPENHTTP_SYSTEM_PREFIX(cleanup)(void);
 
 // ------------------------- END ------------------------------
 
