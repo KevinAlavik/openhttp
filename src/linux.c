@@ -170,6 +170,7 @@ int _openhttp_linux_server_spawn(int _port, _openhttp_client_handler_t client_ha
                 {
                     buffer[bytes_read] = '\0';
                     client_handler(client_fd, buffer);
+                    close(client_fd);
                 }
             }
         }
@@ -207,15 +208,8 @@ int _openhttp_linux_server_callback(int client_fd, const char *request)
 {
     printf("Received request from client %d: %s\n", client_fd, request);
 
-    const char *response =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/plain\r\n"
-        "Content-Length: 13\r\n"
-        "\r\n"
-        "200 OK";
-
-    ssize_t bytes_written = write(client_fd, response, strlen(response));
-    if (bytes_written == -1)
+    const char *response = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!";
+    if (write(client_fd, response, strlen(response)) == -1)
     {
         _openhttp_raise_error(OPENHTTP_SYSTEM_ERROR, "Failed to write response to client socket");
         return OPENHTTP_SYSTEM_ERROR;
