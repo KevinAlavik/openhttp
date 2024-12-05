@@ -11,6 +11,22 @@ void handle_signal(int sig)
     exit(0);
 }
 
+int callback(openhttp_server_t *server, const char *request)
+{
+    (void)server;
+
+    char *response = openhttp_generate_response("200 OK", "test.html");
+    if (response == NULL)
+    {
+        fprintf(stderr, "Error: %s\n", openhttp_error());
+        return OPENHTTP_SYSTEM_ERROR;
+    }
+
+    openhttp_write(response);
+    free(response);
+    return OPENHTTP_SUCCESS;
+}
+
 int main(void)
 {
     signal(SIGINT, handle_signal);
@@ -20,11 +36,20 @@ int main(void)
 
     printf("OpenHTTP v%s\n", OPENHTTP_VERSION_STRING);
 
-    if (openhttp_server_spawn(6969) != OPENHTTP_SUCCESS)
+    openhttp_server_t *server = (openhttp_server_t *)malloc(sizeof(openhttp_server_t));
+    if (server == NULL)
     {
-        fprintf(stderr, "Error: %s\n", openhttp_error());
+        fprintf(stderr, "Error: Failed to allocate memory for server\n");
         return 1;
     }
 
+    if (openhttp_server_spawn(server, 8080, callback) != OPENHTTP_SUCCESS)
+    {
+        fprintf(stderr, "Error: %s\n", openhttp_error());
+        free(server);
+        return 1;
+    }
+
+    free(server);
     return 0;
 }

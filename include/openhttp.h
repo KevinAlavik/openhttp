@@ -59,6 +59,23 @@
  * * * * * * * * *  * * * * * * * *  * * * * * * * *  * * * * * * */
 
 // ------------------------ BEGIN -----------------------------
+/**
+ * Context structure for the OpenHTTP server.
+ *
+ * This structure should be allocated by the user and passed to the openhttp_server_spawn() function.
+ */
+typedef struct openhttp_server
+{
+    int (*_callback)(struct openhttp_server *, const char *request);
+} openhttp_server_t;
+
+/**
+ * Callback function for handling incoming HTTP requests.
+ *
+ * Returns:
+ * - OPENHTTP_SUCCESS if the request was handled successfully, unless an error occurred.
+ */
+typedef int (*_openhttp_write_callback)(openhttp_server_t *, const char *);
 
 /**
  * Spawns a new HTTP server on the specified port.
@@ -66,7 +83,7 @@
  * Returns:
  * - OPENHTTP_SUCCESS if the server was successfully spawned, unless an error
  */
-int openhttp_server_spawn(int port);
+int openhttp_server_spawn(openhttp_server_t *server, int port, _openhttp_write_callback callback);
 
 /**
  * Cleans up any resources allocated by the OpenHTTP library.
@@ -75,6 +92,22 @@ int openhttp_server_spawn(int port);
  * - OPENHTTP_SUCCESS if the cleanup was successful, unless an error occurred.
  */
 int openhttp_cleanup();
+
+/**
+ * Writes the provided data to the client.
+ *
+ * Returns:
+ * - OPENHTTP_SUCCESS if the write was successful, unless an error occurred.
+ */
+int openhttp_write(const char *data);
+
+/**
+ * Generates a HTTP response based on the provided source, supports different content types.
+ *
+ * Returns:
+ * - The generated HTTP response, or NULL if an error occurred.
+ */
+char *openhttp_generate_response(const char *code, const char *file_path);
 
 // ------------------------- END ------------------------------
 
@@ -85,12 +118,18 @@ int openhttp_cleanup();
  * * * * * * * * *  * * * * * * * *  * * * * * * * *  * * * * * * */
 
 // ------------------------ BEGIN -----------------------------
+
+/**
+ * Sets the client handler function for the OpenHTTP library
+ *
+ * Note: System specific.
+ */
 #ifdef __linux__
 #define OPENHTTP_SYSTEM_PREFIX(func) _openhttp_linux_##func
-typedef int (*_openhttp_client_handler_t)(int client_fd, const char *request);
+typedef int (*_openhttp_client_handler_t)(openhttp_server_t *, int client_fd, const char *request);
 #else
 #define OPENHTTP_SYSTEM_PREFIX(func) func
-typedef int (*_openhttp_client_handler_t)(const char *request);
+typedef int (*_openhttp_client_handler_t)(openhttp_server_t *, const char *request);
 #endif // __linux__
 
 /**
@@ -99,7 +138,7 @@ typedef int (*_openhttp_client_handler_t)(const char *request);
  * Returns:
  *  - OPENHTTP_SUCCESS if the server was successfully spawned, unless an error occurred.
  */
-int OPENHTTP_SYSTEM_PREFIX(server_spawn)(int _port, _openhttp_client_handler_t client_handler);
+int OPENHTTP_SYSTEM_PREFIX(server_spawn)(openhttp_server_t *, int, _openhttp_client_handler_t);
 
 /**
  * Handles HTTP requests based on the provided request information.
@@ -109,9 +148,9 @@ int OPENHTTP_SYSTEM_PREFIX(server_spawn)(int _port, _openhttp_client_handler_t c
  */
 
 #ifdef __linux__
-int OPENHTTP_SYSTEM_PREFIX(server_callback)(int client_fd, const char *request);
+int OPENHTTP_SYSTEM_PREFIX(server_callback)(openhttp_server_t *, int, const char *);
 #else
-int OPENHTTP_SYSTEM_PREFIX(server_callback)(const char *request);
+int OPENHTTP_SYSTEM_PREFIX(server_callback)(openhttp_server_t *, const char *);
 #endif // __linux__
 
 /**
@@ -121,6 +160,14 @@ int OPENHTTP_SYSTEM_PREFIX(server_callback)(const char *request);
  * - OPENHTTP_SUCCESS if the cleanup was successful, unless an error occurred.
  */
 int OPENHTTP_SYSTEM_PREFIX(cleanup)(void);
+
+/**
+ * Writes the provided data to the client socket.
+ *
+ * Returns:
+ * - OPENHTTP_SUCCESS if the write was successful, unless an error occurred.
+ */
+int OPENHTTP_SYSTEM_PREFIX(write_callback)(const char *);
 
 // ------------------------- END ------------------------------
 

@@ -58,7 +58,9 @@ static __thread int _linux_listen_fd = -1;
 static __thread int _linux_client_sockets[MAX_EVENTS] = {0};
 static __thread int _linux_client_count = 0;
 
-int _openhttp_linux_server_spawn(int _port, _openhttp_client_handler_t client_handler)
+static __thread int _linux_current_client_fd = -1;
+
+int _openhttp_linux_server_spawn(openhttp_server_t *server, int _port, _openhttp_client_handler_t client_handler)
 {
     int listen_fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
     if (listen_fd == -1)
@@ -152,6 +154,7 @@ int _openhttp_linux_server_spawn(int _port, _openhttp_client_handler_t client_ha
             else if (events[i].events & EPOLLIN)
             {
                 int client_fd = events[i].data.fd;
+                _linux_current_client_fd = client_fd;
                 char buffer[1024];
                 ssize_t bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
                 if (bytes_read == -1)
@@ -169,7 +172,7 @@ int _openhttp_linux_server_spawn(int _port, _openhttp_client_handler_t client_ha
                 else
                 {
                     buffer[bytes_read] = '\0';
-                    client_handler(client_fd, buffer);
+                    client_handler(server, client_fd, buffer);
                     close(client_fd);
                 }
             }
@@ -204,12 +207,15 @@ int _openhttp_linux_cleanup()
     return OPENHTTP_SUCCESS;
 }
 
-int _openhttp_linux_server_callback(int client_fd, const char *request)
+int _openhttp_linux_server_callback(openhttp_server_t *server, int client_fd, const char *request)
 {
-    printf("Received request from client %d: %s\n", client_fd, request);
+    server->_callback(request);
+    return OPENHTTP_SUCCESS;
+}
 
-    const char *response = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!";
-    if (write(client_fd, response, strlen(response)) == -1)
+int _openhttp_linux_write_callback(const char *data)
+{
+    if (write(_linux_current_client_fd, data, strlen(data)) == -1)
     {
         _openhttp_raise_error(OPENHTTP_SYSTEM_ERROR, "Failed to write response to client socket");
         return OPENHTTP_SYSTEM_ERROR;
