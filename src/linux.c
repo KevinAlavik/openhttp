@@ -209,7 +209,7 @@ int _openhttp_linux_cleanup()
 
 int _openhttp_linux_server_callback(openhttp_server_t *server, int client_fd, const char *request)
 {
-    server->_callback(request);
+    server->_callback(server, request);
     return OPENHTTP_SUCCESS;
 }
 
